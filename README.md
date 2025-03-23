@@ -14,6 +14,10 @@ MIT Open Source License
 - Wikipedia - Cross-entropy method <br> 
   [https://en.wikipedia.org/wiki/Cross-entropy_method](https://en.wikipedia.org/wiki/Cross-entropy_method)
 
+- This video shows pretty well what what CEM is doing, <br>
+  Global Minimisation via Cross Entropy Method <br>
+  [https://www.youtube.com/watch?v=l7fS1KDMaOo](https://www.youtube.com/watch?v=l7fS1KDMaOo)
+
 - A Tutorial on the Cross-Entropy Method <br>
   [https://web.mit.edu/6.454/www/www_fall_2003/gew/CEtutorial.pdf](https://web.mit.edu/6.454/www/www_fall_2003/gew/CEtutorial.pdf)
 
