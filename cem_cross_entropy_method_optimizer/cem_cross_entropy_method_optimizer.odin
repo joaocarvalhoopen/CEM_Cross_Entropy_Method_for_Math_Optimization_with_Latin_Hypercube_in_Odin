@@ -41,6 +41,11 @@ import "core:math/rand"
 import "core:slice"
 import "core:os"
 
+MODE_DECREASING_POPULATION :: false
+
+// IMPORTANT: This normally is worse than the normal mode.
+//
+// MODE_DECREASING_POPULATION :: true
 
 // CEM - Cross-Entropy Optimization
 //
@@ -229,6 +234,10 @@ cem_optimize :: proc ( objective_fn      : proc ( x : [ ]f64 ) -> f64,
     fmt.printfln( "Generated scores 0 : best_eval=%e, best_point=%e",
                   out_best_value, population[ 0 ].score )
 
+    // So we can update the num_samples and num_elite in the next iterations.
+    num_samples := num_samples
+    num_elite   := num_elite
+
     // 5. Iterate subsequent generations.
     for iteration in 1 ..= max_iterations {
 
@@ -264,6 +273,32 @@ cem_optimize :: proc ( objective_fn      : proc ( x : [ ]f64 ) -> f64,
         // But we are not going to evaluate it again.
         // Don't forget that there is a descending sort for the score
         // after evaluation in the main loop.
+
+        // With this scheme it goes from the total number of samples or individuals
+        // to the new number of individuals - num_elite.
+        
+        // Calculate the new number of samples ( iter ) and the new num elite ( iter ).
+
+        when MODE_DECREASING_POPULATION {
+
+            iter_num_samples : int = num_samples - int ( f64( num_samples - num_elite ) *
+                                                        ( f64( iteration ) / f64( max_iterations ) )
+                                                    )
+
+            ratio_num_elite := f64( num_elite ) / f64( num_samples )
+
+            iter_num_elite : int = int ( f64( iter_num_samples ) * ratio_num_elite )
+
+            // With trimmed of end inefficient samples, because it end in a Dirac impulse,
+            // and in this way we can give more sample to the first iterations, by enlarging
+            // the initial population.
+
+            num_samples = iter_num_samples
+            
+            num_elite   = iter_num_elite
+        }
+
+
         for ind_index in 1 ..< num_samples {
 
             for d in 0 ..< D {
@@ -287,11 +322,12 @@ cem_optimize :: proc ( objective_fn      : proc ( x : [ ]f64 ) -> f64,
 
 
         // Sort the population in descending order.
-        slice.sort_by( population, compare_individual_desc )
+        slice.sort_by( population[ 0 : num_samples ], compare_individual_desc )
 
         // 5c.  Elite is top num_elite of new population. Recompute mu / var.      
         elite = population[ 0 : num_elite ]  // Top portion is 'elite' after sort.
-        
+
+
 /*
         // Calculate the mean of the elite set.
         for d in 0 ..< D {
@@ -817,10 +853,27 @@ test_rosenbrock_N_dimensions :: proc ( ) {
     // eps            : f64 =   1e-9 //     1e-30   // 1e-6
 
 
+    // WITHOUT POP Deacreasing
+    // Total function evaluations = 6019700
+    // Iteration 300: best_score  = -5.921227e+02
+    // real	0m21,927s     Much faster than the next one.
+
     num_samples    : int = 20000     // Possibly large for high dimension.
     num_elite      : int =  4000     // 20000
     max_iterations : int =   300     //    10       // 200
     eps            : f64 =     1e-12 //     1e-30   // 1e-6
+
+
+    // WITH POP Deacreasing
+    // Total function evaluations = 48_999_756
+    // Iteration 244: best_score  = -5.920818e+02
+    // real	2m53,175s  Much Worst than the previous one.
+
+
+    // num_samples    : int = 200000     // Possibly large for high dimension.
+    // num_elite      : int =  4000      
+    // max_iterations : int =   300      
+    // eps            : f64 =     1e-12  // 
 
 
 
@@ -953,12 +1006,21 @@ test_sum_of_different_power_functions_neg :: proc ( ) {
     // eps            : f64 =  1e-6
  
     // 10_200 evaluations
-    //
+    // 10_150 evaluations   No Decreasing Population    Best value found = -9.663598e-15
     num_samples    : int = 200
     num_elite      : int =  40
     max_iterations : int =  50
     eps            : f64 =   1e-6
 
+    // 11_226 evaluations
+    // 11_226 evaluations   With Decreasing Population    Best value found = -9.670331e-06
+    //
+    // IMPORTANT: Set the constant MODE_DECREASING_POPULATION to TRUE
+
+    // num_samples    : int = 1200
+    // num_elite      : int =  200
+    // max_iterations : int =   50
+    // eps            : f64 =    1e-6
 
 
 
@@ -1128,9 +1190,9 @@ test_sum_of_2_powers_neg :: proc ( ) {
 test_main :: proc ( ) {
  
     // test_3_dimensions( )
-    // test_rosenbrock_N_dimensions( )
+    test_rosenbrock_N_dimensions( )
 
-    test_sum_of_different_power_functions_neg( )
+    // test_sum_of_different_power_functions_neg( )
 
     // test_sum_of_2_powers_neg( )
 }
